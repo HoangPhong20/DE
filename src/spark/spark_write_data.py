@@ -89,7 +89,7 @@ class SparkWriteDatabases:
 
     def spark_write_mongodb(self, df: DataFrame, uri : str, database : str,collection : str, mode : str = "append"):
         try:
-            with MongoDBConnect(self.db_config["mongoDB"]["uri"], self.db_config["mongoDB"]["database"]) as mongo:
+            with MongoDBConnect(uri, database) as mongo:
                     result = mongo.db[collection].update_many(
                         {},  # Cập nhật tất cả tài liệu
                         {"$set": {"spark_temp": None}}  # Thêm cột spark_temp với giá trị null
@@ -116,8 +116,11 @@ class SparkWriteDatabases:
                 .option("pipeline", '[{ "$match": { "spark_temp": "sparkwrite" } }]') \
                 .load()
 
-            def subtract_df(df_spark_write: DataFrame, df_read_database: DataFrame):
-                result = df_spark_write.exceptAll(df_read_database)
+            compare_columns = [col for col in df_write.columns]
+            df_read = df_read.select(compare_columns)
+            df_write = df_write.select(compare_columns)
+            def subtract_df(df_write: DataFrame, df_read: DataFrame):
+                result = df_write.exceptAll(df_read)
                 print(f"-----------records missing : {result.count()}------------")
                 # neu ko rong thi ghi lai data vao collection
                 if not result.isEmpty():
@@ -133,8 +136,8 @@ class SparkWriteDatabases:
 
             # So sánh 2 df
             if df_write.count() == df_read.count():
-                print(f"-----------validate {df_read.count()} records success----------")
                 df_read.printSchema()
+                print(f"-----------validate {df_read.count()} records success----------")
                 subtract_df(df_write, df_read)
             else:
                 print(f"-----------spark miss inserted records------------")
@@ -142,7 +145,7 @@ class SparkWriteDatabases:
 
             # drop spark_temp
             try:
-                with MongoDBConnect(self.db_config["uri"], self.db_config["database"]) as mongo:
+                with MongoDBConnect(uri, database) as mongo:
                     result = mongo.db[collection].update_many(
                         {"spark_temp": {"$exists": True}}, {"$unset": {"spark_temp": ""}}
                     )
@@ -151,7 +154,6 @@ class SparkWriteDatabases:
                 raise Exception(f"---------fail to drop column mongo: {e}-------------")
 
             print("-----------Validate spark write data to MONGO success--------------")
-
 
     def write_all_databases(self, df: DataFrame, mode: str = "append"):
         # self.spark_write_mysql(
