@@ -41,6 +41,7 @@ def main():
         ]), True)
     ])
     df = spark_connect.spark.read.schema(schema).json(r"C:\Users\Du\PycharmProjects\PythonProject\data\2015-03-01-17.json")
+
     df_write_table = df.withColumn("spark_temp",lit("sparkwrite")).select(
         col("actor.id").alias("user_id"),
         col("actor.login").alias("login"),
@@ -55,8 +56,10 @@ def main():
     df = SparkWriteDatabases(spark_connect.spark,spark_config)
     df.write_all_databases(df_write_table)
     #validate
-    #df.validate_spark_mysql(df_write_table,spark_config["mysql"]["table"],spark_config["mysql"]["jdbc_url"],spark_config["mysql"]["config"])
-    df.validate_spark_mongodb(df_write_table,spark_config["mongoDB"]["collection"],spark_config["mongoDB"]["uri"],spark_config["mongoDB"]["database"])
+    df.validate_spark_mysql(df_write_table,spark_config["mysql"]["table"],spark_config["mysql"]["jdbc_url"],spark_config["mysql"]["config"])
+    #df.validate_spark_mongodb(df_write_table,spark_config["mongoDB"]["collection"],spark_config["mongoDB"]["uri"],spark_config["mongoDB"]["database"])
+    df.validate_spark_write_primaryKey(df_write_table,spark_config["mysql"]["jdbc_url"],spark_config["mysql"]["config"])
+    df.insert_data_mysql_primaryKey(spark_config["mysql"])
 if __name__ == "__main__":
     main()
 

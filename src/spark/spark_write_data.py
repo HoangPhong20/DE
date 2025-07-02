@@ -66,7 +66,6 @@ class SparkWriteDatabases:
         # so sanh 2 df
         if df_write.count() == df_read.count():
             print(f"-----------validate {df_read.count()} records success----------")
-            subtract_df(df_write,df_read)
         else:
             print(f"-----------spark miss inserted records------------")
             subtract_df(df_write,df_read)
@@ -86,91 +85,87 @@ class SparkWriteDatabases:
 
         print("-----------Validate spark write data to MYSQL success--------------")
 
-
-    def spark_write_mongodb(self, df: DataFrame, uri : str, database : str,collection : str, mode : str = "append"):
-        try:
-            with MongoDBConnect(uri, database) as mongo:
-                    result = mongo.db[collection].update_many(
-                        {},  # Cập nhật tất cả tài liệu
-                        {"$set": {"spark_temp": None}}  # Thêm cột spark_temp với giá trị null
-                    )
-                    print(f"-------Add column spark_temp to mongo success------------")
-        except Exception as e:
-                raise Exception(f"---------fail to connect mysql: {e}-------------")
-        # mongodb://phong:123@127.0.0.1:27017
+    def spark_write_mysql_primaryKey(self, df: DataFrame, jdbc_url: str, config: Dict, mode: str = "append"):
         df.write \
-            .format("mongo") \
-            .option("uri", uri) \
-            .option("database", database) \
-            .option("collection", collection) \
-            .mode(mode) \
-            .save()
-        print(f"-----------Spark write data to mongo collection : {collection} success---------")
+                .format("jdbc") \
+                .option("url", jdbc_url) \
+                .option("dbtable", "spark_table_temp") \
+                .option("user", config["user"]) \
+                .option("password", config["password"]) \
+                .option("driver", "com.mysql.cj.jdbc.Driver") \
+                .mode(mode) \
+                .save()
+        print(f"-----spark write data to mysql table: spark_table_temp successfully-------")
 
-    def validate_spark_mongodb(self, df_write: DataFrame, collection: str, uri: str, database: str,mode: str = "append"):
+    def validate_spark_write_primaryKey(self, df_write: DataFrame, jdbc_url: str, config: Dict,mode: str = "append"):
+        try:
             df_read = self.spark.read \
-                .format("mongo") \
-                .option("uri", uri) \
-                .option("database", database) \
-                .option("collection", collection) \
-                .option("pipeline", '[{ "$match": { "spark_temp": "sparkwrite" } }]') \
-                .load()
+                    .format("jdbc") \
+                    .option("url", jdbc_url) \
+                    .option("dbtable", "spark_table_temp") \
+                    .option("user", config["user"]) \
+                    .option("password", config["password"]) \
+                    .option("driver", "com.mysql.cj.jdbc.Driver") \
+                    .load()
+            df_temp = df_write.exceptAll(df_read)
+            if df_temp.count() != 0:
+                df_temp.write \
+                    .format("jdbc") \
+                    .option("url", jdbc_url) \
+                    .option("dbtable", "spark_table_temp") \
+                    .option("user", config["user"]) \
+                    .option("password", config["password"]) \
+                    .option("driver", "com.mysql.cj.jdbc.Driver") \
+                    .mode(mode) \
+                    .save()
+                print(f"-------validate spark write data to mysql table spark_table_temp successfully------")
+        except Exception as e:
+            raise Exception(f"----failed to write missing record to spark_table_temp in mysql----")
 
-            compare_columns = [col for col in df_write.columns]
-            df_read = df_read.select(compare_columns)
-            df_write = df_write.select(compare_columns)
-            def subtract_df(df_write: DataFrame, df_read: DataFrame):
-                result = df_write.exceptAll(df_read)
-                print(f"-----------records missing : {result.count()}------------")
-                # neu ko rong thi ghi lai data vao collection
-                if not result.isEmpty():
-                    result.write \
-                        .format("mongo") \
-                        .option("uri", uri) \
-                        .option("database", database) \
-                        .option("collection", collection) \
-                        .mode(mode) \
-                        .save()
-                    print(
-                        f"-----------spark write missing records to mongodb collection : {collection} success------------")
-
-            # So sánh 2 df
-            if df_write.count() == df_read.count():
-                df_read.printSchema()
-                print(f"-----------validate {df_read.count()} records success----------")
-                subtract_df(df_write, df_read)
-            else:
-                print(f"-----------spark miss inserted records------------")
-                subtract_df(df_write, df_read)
-
-            # drop spark_temp
-            try:
-                with MongoDBConnect(uri, database) as mongo:
-                    result = mongo.db[collection].update_many(
-                        {"spark_temp": {"$exists": True}}, {"$unset": {"spark_temp": ""}}
-                    )
-                    print(f"-------Drop column spark_temp to mongo success------------")
-            except Exception as e:
-                raise Exception(f"---------fail to drop column mongo: {e}-------------")
-
-            print("-----------Validate spark write data to MONGO success--------------")
+    def insert_data_mysql_primaryKey(self, config: Dict):
+        try:
+            with MySQLConnect(config["host"], config["port"], config["user"],
+                              config["password"]) as mysql_client:
+                connection, cursor = mysql_client.connection, mysql_client.cursor
+                database = "github_data"
+                connection.database = database
+                cursor.execute(
+                    "SELECT a. * FROM spark_table_temp a LEFT JOIN users b ON a.user_id = b.user_id WHERE b.user_id IS NULL;")
+                for rec in cursor.fetchall():
+                    try:
+                        cursor.execute(
+                            "INSERT INTO users (user_id, login, gravatar_id, url, avatar_url) VALUES (%s, %s, %s, %s, %s)",
+                            rec
+                        )
+                        connection.commit()
+                        print("-----insert data into mysql successfully-----")
+                    except Exception as e:
+                        print(f"Error inserting record {rec}: {str(e)}")
+                        continue
+        except Exception as e:
+                raise Exception(f"-----failed to connect to mysql: {e}------")
 
     def write_all_databases(self, df: DataFrame, mode: str = "append"):
-        # self.spark_write_mysql(
-        #     df,
-        #     self.db_config["mysql"]["table"],
-        #     self.db_config["mysql"]["jdbc_url"],
-        #     self.db_config["mysql"]["config"],
-        #     mode
-        # )
-
-        self.spark_write_mongodb(
+        self.spark_write_mysql(
             df,
-            self.db_config["mongoDB"]["uri"],
-            self.db_config["mongoDB"]["database"],
-            self.db_config["mongoDB"]["collection"],
+            self.db_config["mysql"]["table"],
+            self.db_config["mysql"]["jdbc_url"],
+            self.db_config["mysql"]["config"],
+            mode
+        ),
+        self.spark_write_mysql_primaryKey(
+            df,
+            self.db_config["mysql"]["jdbc_url"],
+            self.db_config["mysql"]["config"],
             mode
         )
+        # self.spark_write_mongodb(
+        #     df,
+        #     self.db_config["mongoDB"]["uri"],
+        #     self.db_config["mongoDB"]["database"],
+        #     self.db_config["mongoDB"]["collection"],
+        #     mode
+        # )
         print(f"-----------Spark write to all database success---------")
 
 
