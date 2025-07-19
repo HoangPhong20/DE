@@ -56,10 +56,7 @@ def main():
     df = SparkWriteDatabases(spark_connect.spark,spark_config)
     df.write_all_databases(df_write_table)
     #validate
-    df.validate_spark_mysql(df_write_table,spark_config["mysql"]["table"],spark_config["mysql"]["jdbc_url"],spark_config["mysql"]["config"])
-    #df.validate_spark_mongodb(df_write_table,spark_config["mongoDB"]["collection"],spark_config["mongoDB"]["uri"],spark_config["mongoDB"]["database"])
-    df.validate_spark_write_primaryKey(df_write_table,spark_config["mysql"]["jdbc_url"],spark_config["mysql"]["config"])
-    df.insert_data_mysql_primaryKey(spark_config["mysql"])
+    df.validate_spark_all_databases(df_write_table)
 if __name__ == "__main__":
     main()
 
