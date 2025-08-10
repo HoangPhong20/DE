@@ -57,6 +57,7 @@ def main():
     df.write_all_databases(df_write_table)
     #validate
     df.validate_spark_all_databases(df_write_table)
+
 if __name__ == "__main__":
     main()
 

@@ -3,15 +3,13 @@ from databases.mysql_connect import MySQLConnect
 from config.database_config import get_database_config
 import json
 
-
 def get_data_trigger(mysql_client,last_timestamp):
-
         connection, cursor = mysql_client.connection, mysql_client.cursor
         database = "github_data"
         connection.database = database
 
         query = ("SELECT user_id, login, gravatar_id, url, avatar_url, state, "
-                       " DATE_FORMAT(log_timestamp, '%Y-%m-%d %H:%i:%s.%f') AS log_timestamp1"
+                       " DATE_FORMAT(log_timestamp, '%Y-%m-%d %H:%i:%s.%f') AS log_timestamp"
                        " FROM users_log_after")
 
         if last_timestamp:
@@ -36,14 +34,13 @@ def main():
                           config["mysql"].password) as mysql_client:
 
         producer = KafkaProducer(bootstrap_servers="localhost:9092"
-                                     , value_serializer=lambda x: json.dumps(x).encode('utf-8'))
-
+                                ,value_serializer=lambda x: json.dumps(x).encode('utf-8'))
         while True:
             data , max_timestamp = get_data_trigger(mysql_client, last_timestamp)
             last_timestamp = max_timestamp
             print(f"----------last_timestamp = {last_timestamp}------------")
             for record in data:
                 producer.send("phong", record)
-                    # print(record)
+                # print(record)
 if __name__ == "__main__":
     main()
