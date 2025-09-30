@@ -1,7 +1,6 @@
 from kafka import KafkaConsumer
 
 consumer = KafkaConsumer("phong", bootstrap_servers = "localhost:9092")
-
 running = True
 count_msg = 0
 while running:

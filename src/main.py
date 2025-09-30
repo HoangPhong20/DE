@@ -14,18 +14,19 @@ def main(config):
         connection.commit()
         print("------------Inserted data to mysql------------")
         validate_mysql_schema(cursor)
+
 # MONGO_DB
-#     with MongoDBConnect(config["mongoDB"].uri, config["mongoDB"].db_name) as mongo_client:
-#          create_mongo_schema(mongo_client.connect())
-#          mongo_client.db.users.insert_one({
-#                 "user_id" : 1,
-#                 "login" : "phong",
-#                 "gravatar_id" : "test gravatar_id",
-#                 "url" : "https://testurl.com",
-#                 "avatar_url" : "https://testavatar_url.avatar_url"
-#             })
-#          print("-------------Inserted one record to MongoDB---------------")
-#          validate_mongodb_schema(mongo_client.connect())
+    with MongoDBConnect(config["mongoDB"].uri, config["mongoDB"].db_name) as mongo_client:
+         create_mongo_schema(mongo_client.connect())
+         mongo_client.db.users.insert_one({
+                "user_id" : 1,
+                "login" : "phong",
+                "gravatar_id" : "test gravatar_id",
+                "url" : "https://testurl.com",
+                "avatar_url" : "https://testavatar_url.avatar_url"
+            })
+         print("-------------Inserted one record to MongoDB---------------")
+         validate_mongodb_schema(mongo_client.connect())
 
 if __name__ == "__main__":
     config = get_database_config()

@@ -42,7 +42,6 @@ def get_spark_config():
         "mysql" : {
             "table" : db_config["mysql"].table,
             "jdbc_url" : "jdbc:mysql://{}:{}/{}".format(db_config["mysql"].host,db_config["mysql"].port,db_config["mysql"].database),
-            # cach 1 de viet config
             "config" : {
                 "host" : db_config["mysql"].host,
                 "port" : db_config["mysql"].port,
@@ -54,15 +53,9 @@ def get_spark_config():
 
         "mongoDB" : {
             "uri" : db_config["mongoDB"].uri,
-            # cach 2
             "database" : db_config["mongoDB"].db_name,
             "collection" : db_config["mongoDB"].collections
 
-        },
-        "redis" : {}
+        }
     }
-
-# if __name__ == "__main__" :
-#     config = get_spark_config()
-#     print(config)
 

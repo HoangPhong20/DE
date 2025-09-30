@@ -1,11 +1,8 @@
 from pyspark.sql import SparkSession, DataFrame
 from typing import Dict
-
 from pyspark.sql.functions import lit
-
 from databases.mongoDB_connect import MongoDBConnect
 from databases.mysql_connect import MySQLConnect
-
 
 class SparkWriteDatabases:
     def __init__(self,spark : SparkSession, db_config : Dict):
@@ -127,7 +124,6 @@ class SparkWriteDatabases:
         else:
             print(f"-----------spark inserted missing records in mongo success------------")
             subtract_df(df_write, df_read)
-
         # drop spark_temp
         try:
             with MongoDBConnect(uri,database) as mongo_client:
@@ -148,13 +144,13 @@ class SparkWriteDatabases:
             self.db_config["mysql"]["config"],
             mode
         ),
-        # self.spark_write_mongodb(
-        #     df,
-        #     self.db_config["mongoDB"]["uri"],
-        #     self.db_config["mongoDB"]["database"],
-        #     self.db_config["mongoDB"]["collection"],
-        #     mode
-        # )
+        self.spark_write_mongodb(
+            df,
+            self.db_config["mongoDB"]["uri"],
+            self.db_config["mongoDB"]["database"],
+            self.db_config["mongoDB"]["collection"],
+            mode
+        )
         print(f"-----------Spark write to all database success---------")
 
     def validate_spark_all_databases(self, df: DataFrame, mode : str = "append"):
@@ -163,15 +159,15 @@ class SparkWriteDatabases:
             self.db_config["mysql"]["table"],
             self.db_config["mysql"]["jdbc_url"],
             self.db_config["mysql"]["config"],
-            mode
+            mode 
         ),
-        # self.validate_spark_mongodb(
-        #     df,
-        #     self.db_config["mongoDB"]["uri"],
-        #     self.db_config["mongoDB"]["database"],
-        #     self.db_config["mongoDB"]["collection"],
-        #     mode
-        # )
+        self.validate_spark_mongodb(
+            df,
+            self.db_config["mongoDB"]["uri"],
+            self.db_config["mongoDB"]["database"],
+            self.db_config["mongoDB"]["collection"],
+            mode
+        )
         print("------------Validate all databases success------------")
 
 

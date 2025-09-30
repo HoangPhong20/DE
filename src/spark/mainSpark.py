@@ -1,20 +1,14 @@
 from pyspark.sql.functions import col, lit
 from pyspark.sql.types import *
-
 from config.spark_config import Spark_connect
-
 from config.database_config import get_spark_config
-
 from spark_write_data import SparkWriteDatabases
 
 def main():
-
-    # JDBC la phuong thuc, khong phai 1 jar
     jar = [
         "mysql:mysql-connector-java:8.0.33",
         "org.mongodb.spark:mongo-spark-connector_2.12:3.0.1"
     ]
-
     spark_connect = Spark_connect(
         app_name="phong",
         master_url="local[*]",
@@ -25,7 +19,6 @@ def main():
         jar_packages=jar,
         log_level="INFO"
     )
-
     schema = StructType([
         StructField("actor", StructType([
             StructField("id", IntegerType(), True),
@@ -40,6 +33,7 @@ def main():
             StructField("url", StringType(), True)
         ]), True)
     ])
+
     df = spark_connect.spark.read.schema(schema).json(r"C:\Users\Du\PycharmProjects\PythonProject\data\2015-03-01-17.json")
 
     df_write_table = df.withColumn("spark_temp",lit("sparkwrite")).select(
