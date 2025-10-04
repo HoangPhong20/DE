@@ -17,7 +17,7 @@ def main(config):
 
 # MONGO_DB
     with MongoDBConnect(config["mongoDB"].uri, config["mongoDB"].db_name) as mongo_client:
-         create_mongo_schema(mongo_client.connect())
+         create_mongo_schema(mongo_client.db)
          mongo_client.db.users.insert_one({
                 "user_id" : 1,
                 "login" : "phong",

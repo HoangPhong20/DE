@@ -3,8 +3,6 @@ from pyspark.sql.types import *
 from config.database_config import get_spark_config
 from config.spark_config import Spark_connect
 
-
-
 jar = [
     "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0",
     "org.mongodb.spark:mongo-spark-connector_2.12:10.5.0",
@@ -27,6 +25,7 @@ df = spark.readStream \
         .option("startingOffsets","earliest") \
         .option("kafka.bootstrap.servers", "localhost:9092") \
         .option("subscribe", "phong") \
+        .option("failOnDataLoss", "false") \
         .load()
 
 schemaKafka = StructType([
@@ -47,7 +46,9 @@ data = data_decode.select(from_json(col("value"),schemaKafka).alias("data")) \
                      .select("data.*")
 
 # data_decode = df.selectExpr("CAST(value AS STRING)")
+
 spark_config = get_spark_config()
+
 data.writeStream \
     .format("mongodb") \
     .option("checkpointLocation", "/tmp/spark_checkpoint/mongo") \
@@ -58,3 +59,10 @@ data.writeStream \
     .outputMode("append") \
     .start() \
     .awaitTermination()
+
+# data.writeStream \
+#     .format("console") \
+#     .queryName("ConsoleOutput") \
+#     .outputMode("append") \
+#     .start() \
+#     .awaitTermination()

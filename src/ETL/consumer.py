@@ -3,6 +3,7 @@ from kafka import KafkaConsumer
 consumer = KafkaConsumer("phong", bootstrap_servers = "localhost:9092")
 running = True
 count_msg = 0
+print("Waiting for messages...")
 while running:
     msg_pack = consumer.poll(timeout_ms=500)
     # consumer.poll() là hàm của KafkaConsumer, dùng để lấy message từ Kafka.
